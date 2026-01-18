@@ -24,36 +24,29 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.rememberNavController
 import com.example.ibanking_soa.R
+import com.example.ibanking_soa.event.HistoryEvent
 import com.example.ibanking_soa.ui.theme.BackgroundColor
 import com.example.ibanking_soa.ui.theme.CustomTypography
 import com.example.ibanking_soa.ui.theme.LabelColor
 import com.example.ibanking_soa.ui.theme.PrimaryColor
 import com.example.ibanking_soa.ui.theme.SecondaryColor
 import com.example.ibanking_soa.ui.theme.TextColor
+import com.example.ibanking_soa.uiState.HistoryUS
+import com.example.ibanking_soa.utils.formatVND
 import com.example.ibanking_soa.utils.formatterDate
-import com.example.ibanking_soa.viewModel.AppViewModel
-import java.time.LocalDateTime
-import java.time.OffsetDateTime
-import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PaymentHistory(
-    appViewModel: AppViewModel,
-    navController: NavHostController
+    uiState: HistoryUS,
+    onEvent: (HistoryEvent) -> Unit,
+    onBackClick: () -> Unit,
 ) {
-    val appUiState by appViewModel.uiState.collectAsState()
 
     Scaffold(
         topBar = {
@@ -65,10 +58,8 @@ fun PaymentHistory(
                     )
                 },
                 navigationIcon = {
-                    IconButton (
-                        onClick = {
-                            navController.navigateUp()
-                        }
+                    IconButton(
+                        onClick = onBackClick
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -85,14 +76,17 @@ fun PaymentHistory(
         },
         containerColor = BackgroundColor
     ) { innerPadding ->
-        if(appUiState.paymentHistory.isEmpty()){
-            Row (modifier = Modifier.fillMaxSize().padding(20.dp),
+        if (uiState.paymentHistory.isEmpty()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center){
-                Text(text = "No Payment History",)
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(text = "No Payment History")
             }
-        }
-        else{
+        } else {
             LazyColumn(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Top,
@@ -101,14 +95,15 @@ fun PaymentHistory(
                     .padding(innerPadding)
                     .padding(20.dp)
             ) {
-                items(appUiState.paymentHistory) {
+                items(uiState.paymentHistory) {
                     HistoryItem(
                         paymentDate = it.createdAt,
-                        amount = "${appViewModel.formatCurrency(it.totalAmount)} VND",
+                        amount = "${it.totalAmount.formatVND()} VND",
                         onTitleClick = {
-                            appViewModel.onViewPaymentDetailsClick(
-                                selectedPayment = it,
-                                navController = navController
+                            onEvent(
+                                HistoryEvent.SelectPayment(
+                                    it
+                                )
                             )
                         },
                         modifier = Modifier.fillMaxWidth()
@@ -173,16 +168,16 @@ fun HistoryItem(
     }
 }
 
-@Preview(
-    showBackground = true,
-    showSystemUi = true
-)
-@Composable
-fun PaymentHistoryPreview() {
-    val fakeAppViewModel: AppViewModel = viewModel()
-    val fakeNavController: NavHostController = rememberNavController()
-    PaymentHistory(
-        appViewModel = fakeAppViewModel,
-        navController = fakeNavController
-    )
-}
+//@Preview(
+//    showBackground = true,
+//    showSystemUi = true
+//)
+//@Composable
+//fun PaymentHistoryPreview() {
+//    val fakeAppViewModel: AppViewModel = viewModel()
+//    val fakeNavController: NavHostController = rememberNavController()
+//    PaymentHistory(
+//        appViewModel = fakeAppViewModel,
+//        navController = fakeNavController
+//    )
+//}

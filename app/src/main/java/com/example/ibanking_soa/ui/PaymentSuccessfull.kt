@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -33,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -46,7 +48,9 @@ import com.example.ibanking_soa.ui.theme.LabelColor
 import com.example.ibanking_soa.ui.theme.PrimaryColor
 import com.example.ibanking_soa.ui.theme.SecondaryColor
 import com.example.ibanking_soa.ui.theme.WarningColor
+import com.example.ibanking_soa.uiState.Payment
 import com.example.ibanking_soa.uiState.PaymentHistoryStatus
+import com.example.ibanking_soa.utils.formatVND
 import com.example.ibanking_soa.utils.formatterDate
 import com.example.ibanking_soa.viewModel.AppViewModel
 import java.time.format.DateTimeFormatter
@@ -54,11 +58,9 @@ import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PaymentSuccessful(
-    appViewModel: AppViewModel,
-    navController: NavHostController
+    payment: Payment?,
+    onBackClick: () -> Unit
 ) {
-    val appUiState by appViewModel.uiState.collectAsState()
-    val formatter = DateTimeFormatter.ofPattern("HH:mm:ss | yyyy-MM-dd")
 
     Scaffold(
         topBar = {
@@ -70,10 +72,8 @@ fun PaymentSuccessful(
                     )
                 },
                 navigationIcon = {
-                    IconButton (
-                        onClick = {
-                            navController.navigateUp()
-                        }
+                    IconButton(
+                        onClick = onBackClick
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -90,91 +90,103 @@ fun PaymentSuccessful(
         },
         containerColor = BackgroundColor
     ) { innerPadding ->
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(20.dp)
-        ) {
-            Box(
+        if (payment == null) {
+            Text(
+                text = "No payment data available",
+                style = CustomTypography.bodyLarge,
+                color = LabelColor,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        } else {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Top,
                 modifier = Modifier
-                    .clip(shape = CircleShape)
-                    .background(
-                        color = when (appUiState.payment.status) {
-                            PaymentHistoryStatus.SUCCESS.status -> SecondaryColor
-                            PaymentHistoryStatus.FAILED.status -> AlertColor
-                            PaymentHistoryStatus.PENDING.status -> WarningColor
-                            else -> WarningColor
-                        }
-                    )
+                    .fillMaxSize()
+                    .padding(innerPadding)
                     .padding(20.dp)
             ) {
-                Icon(
-                    imageVector = when (appUiState.payment.status) {
-                        PaymentHistoryStatus.SUCCESS.status -> Icons.Default.DoneOutline
-                        PaymentHistoryStatus.FAILED.status -> Icons.Default.ErrorOutline
-                        PaymentHistoryStatus.PENDING.status -> Icons.Default.Timelapse
-                        else -> Icons.Default.QuestionMark
-                    },
-                    contentDescription = null,
-                    tint = BackgroundColor,
+                Box(
                     modifier = Modifier
-                        .size(50.dp)
+                        .clip(shape = CircleShape)
+                        .background(
+                            color = when (payment.status) {
+                                PaymentHistoryStatus.SUCCESS.status -> SecondaryColor
+                                PaymentHistoryStatus.FAILED.status -> AlertColor
+                                PaymentHistoryStatus.PENDING.status -> WarningColor
+                                else -> WarningColor
+                            }
+                        )
+                        .padding(20.dp)
+                ) {
+                    Icon(
+                        imageVector = when (payment.status) {
+                            PaymentHistoryStatus.SUCCESS.status -> Icons.Default.DoneOutline
+                            PaymentHistoryStatus.FAILED.status -> Icons.Default.ErrorOutline
+                            PaymentHistoryStatus.PENDING.status -> Icons.Default.Timelapse
+                            else -> Icons.Default.QuestionMark
+                        },
+                        contentDescription = null,
+                        tint = BackgroundColor,
+                        modifier = Modifier
+                            .size(50.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = payment.status,
+                    style = CustomTypography.titleLarge,
+                    color = when (payment.status) {
+                        PaymentHistoryStatus.SUCCESS.status -> SecondaryColor
+                        PaymentHistoryStatus.FAILED.status -> AlertColor
+                        PaymentHistoryStatus.PENDING.status -> WarningColor
+                        else -> WarningColor
+                    }
+                )
+                HorizontalDivider(
+                    thickness = 1.dp,
+                    color = LabelColor,
+                    modifier = Modifier.padding(vertical = 20.dp)
+                )
+                PaymentInfLine(
+                    lineText = R.string.PaymentDetails_ReferenceCode,
+                    content = payment.paymentRef ?: "",
+                    modifier = Modifier.fillMaxWidth()
+                )
+                PaymentInfLine(
+                    lineText = R.string.PaymentDetails_Date,
+                    content = formatterDate(payment.paidAt),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                PaymentInfLine(
+                    lineText = R.string.PaymentDetails_StudentId,
+                    content = payment.studentId,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                PaymentInfLine(
+                    lineText = R.string.PaymentDetails_Amount,
+                    content = "${payment.totalAmount.formatVND()} VND",
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
-            Spacer(modifier = Modifier.height(10.dp))
-            Text(
-                text = appUiState.payment.status,
-                style = CustomTypography.titleLarge,
-                color = when (appUiState.payment.status) {
-                    PaymentHistoryStatus.SUCCESS.status -> SecondaryColor
-                    PaymentHistoryStatus.FAILED.status -> AlertColor
-                    PaymentHistoryStatus.PENDING.status -> WarningColor
-                    else -> WarningColor
-                }
-            )
-            HorizontalDivider(
-                thickness = 1.dp,
-                color = LabelColor,
-                modifier = Modifier.padding(vertical = 20.dp)
-            )
-            PaymentInfLine(
-                lineText = R.string.PaymentDetails_ReferenceCode,
-                content = appUiState.payment.paymentRef?:"",
-                modifier = Modifier.fillMaxWidth()
-            )
-            PaymentInfLine(
-                lineText = R.string.PaymentDetails_Date,
-                content = formatterDate(appUiState.payment.paidAt) ,
-                modifier = Modifier.fillMaxWidth()
-            )
-            PaymentInfLine(
-                lineText = R.string.PaymentDetails_StudentId,
-                content = appUiState.payment.studentId,
-                modifier = Modifier.fillMaxWidth()
-            )
-            PaymentInfLine(
-                lineText = R.string.PaymentDetails_Amount,
-                content = "${appViewModel.formatCurrency(appUiState.payment.totalAmount)} VND",
-                modifier = Modifier.fillMaxWidth()
-            )
+
         }
+
     }
 }
 
-@Preview(
-    showBackground = true,
-    showSystemUi = true
-)
-@Composable
-fun PaymentSuccessfulPreview() {
-    val fakeAppViewModel: AppViewModel = viewModel()
-    val fakeNavController: NavHostController = rememberNavController()
-
-    PaymentHistoryDetails(
-        appViewModel = fakeAppViewModel,
-        navController = fakeNavController
-    )
-}
+//@Preview(
+//    showBackground = true,
+//    showSystemUi = true
+//)
+//@Composable
+//fun PaymentSuccessfulPreview() {
+//    val fakeAppViewModel: AppViewModel = viewModel()
+//    val fakeNavController: NavHostController = rememberNavController()
+//
+//    PaymentHistoryDetails(
+//        appViewModel = fakeAppViewModel,
+//        navController = fakeNavController
+//    )
+//}

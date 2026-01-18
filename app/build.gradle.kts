@@ -1,3 +1,9 @@
+apply {
+    from("../secret.gradle")
+}
+val devConfig =
+    (project.extra["env"] as Map<*, *>).map { it.key.toString() to it.value.toString() }
+        .toMap()
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -19,6 +25,10 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
+    buildFeatures {
+        viewBinding = true
+        buildConfig = true
+    }
 
     buildTypes {
         release {
@@ -27,6 +37,16 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            devConfig.forEach { (key, value) ->
+                buildConfigField("String", key, "\"${value}\"")
+            }
+        }
+        debug {
+            isMinifyEnabled = false
+            //noinspection WrongGradleMethod
+            devConfig.forEach { (key, value) ->
+                buildConfigField("String", key, "\"${value}\"")
+            }
         }
     }
     compileOptions {

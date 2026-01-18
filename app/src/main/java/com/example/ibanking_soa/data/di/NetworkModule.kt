@@ -2,6 +2,7 @@ package com.example.ibanking_soa.data.di
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.example.ibanking_soa.BuildConfig
 import com.example.ibanking_soa.data.api.OtpApi
 import com.example.ibanking_soa.data.api.PaymentApi
 import com.example.ibanking_soa.data.api.TuitionApi
@@ -22,8 +23,8 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
-//    val baseUrl = "http://10.68.28.178:4006/"
-    val baseUrl = "https://nsqxjbdt-4006.asse.devtunnels.ms/"
+    val baseUrl = BuildConfig.GATEWAY_URL
+
     @Singleton
     @Provides
     fun provideSharedPreferences(@ApplicationContext context: Context): SharedPreferences {
@@ -80,6 +81,7 @@ object NetworkModule {
     fun provideAuthUserApi(@Named("AuthRetrofit") retrofit: Retrofit): UserApi {
         return retrofit.create(UserApi::class.java)
     }
+
     @Singleton
     @Provides
     @Named("NonAuthUser")

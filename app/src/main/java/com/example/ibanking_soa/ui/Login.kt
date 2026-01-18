@@ -46,6 +46,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -67,6 +68,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.example.ibanking_soa.R
 import com.example.ibanking_soa.data.utils.ApiResult
+import com.example.ibanking_soa.event.LoginEvent
 import com.example.ibanking_soa.ui.theme.AlertColor
 import com.example.ibanking_soa.ui.theme.BackgroundColor
 import com.example.ibanking_soa.ui.theme.CustomTypography
@@ -75,22 +77,16 @@ import com.example.ibanking_soa.ui.theme.PrimaryColor
 import com.example.ibanking_soa.ui.theme.SecondaryColor
 import com.example.ibanking_soa.ui.theme.TextColor
 import com.example.ibanking_soa.ui.theme.ThirdColor
+import com.example.ibanking_soa.uiState.LoginUS
 import com.example.ibanking_soa.viewModel.AppViewModel
 
 @Composable
 fun LoginScreen(
-    appViewModel: AppViewModel,
-    navController: NavHostController
+    uiState: LoginUS,
+    onEvent: (LoginEvent) -> Unit
 ) {
-    // Variables
-    val context = LocalContext.current
-    val appUiState by appViewModel.uiState.collectAsState()
+    var isShowPassword by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        appViewModel.loadUsernameAndPassword(context)
-    }
-
-    // UI
     LoginBackground {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -118,11 +114,20 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(50.dp))
             LoginTextField(
                 label = R.string.LoginScreen_UsernameLabel,
-                value = appViewModel.usernameValue,
-                onValueChange = { appViewModel.onUsernameChange(it) },
+                value = uiState.email,
+                onValueChange = {
+                    onEvent(
+                        LoginEvent.ChangeEmail(it)
+                    )
+                },
                 leadingIcon = Icons.Default.Person,
                 trailingIcon = Icons.Default.Clear,
-                onTrailingIconClick = { appViewModel.clearUsername() },
+                onTrailingIconClick = {
+                    onEvent(
+                        LoginEvent.ChangeEmail("")
+                    )
+
+                },
                 keyboardOptions = KeyboardOptions.Default.copy(
                     keyboardType = KeyboardType.Text,
                     imeAction = ImeAction.Next
@@ -131,18 +136,28 @@ fun LoginScreen(
             )
             LoginTextField(
                 label = R.string.LoginScreen_PasswordLabel,
-                value = appViewModel.passwordValue,
-                onValueChange = { appViewModel.onPasswordChange(it) },
+                value = uiState.password,
+                onValueChange = {
+                    onEvent(
+                        LoginEvent.ChangePassword(it)
+                    )
+                },
                 leadingIcon = Icons.Default.Lock,
                 trailingIcon = Icons.Default.Clear,
-                onTrailingIconClick = { appViewModel.clearPassword() },
+                onTrailingIconClick = {
+                    onEvent(
+                        LoginEvent.ChangePassword("")
+                    )
+                },
                 keyboardOptions = KeyboardOptions.Default.copy(
                     keyboardType = KeyboardType.Password,
                     imeAction = ImeAction.Done
                 ),
                 isPasswordField = true,
-                isPasswordShow = appViewModel.isPasswordVisible,
-                onPasswordIconClick = { appViewModel.onPasswordShowingIconClick() },
+                isPasswordShow = isShowPassword,
+                onPasswordIconClick = {
+                    isShowPassword = !isShowPassword
+                },
                 modifier = Modifier.width(300.dp)
             )
             Row(
@@ -160,8 +175,12 @@ fun LoginScreen(
                 Spacer(modifier = Modifier.width(5.dp))
                 CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
                     Checkbox(
-                        checked = appViewModel.isPasswordRemembered,
-                        onCheckedChange = { appViewModel.onRememberPasswordClick() },
+                        checked = uiState.isRememberMe,
+                        onCheckedChange = {
+                            onEvent(
+                                LoginEvent.IsRememberMeChecked
+                            )
+                        },
                         colors = CheckboxDefaults.colors(
                             uncheckedColor = SecondaryColor,
                             checkedColor = ThirdColor,
@@ -170,7 +189,7 @@ fun LoginScreen(
                     )
                 }
             }
-            if (appViewModel.errorMessage != "") {
+            if (uiState.errMessage != "") {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Start,
@@ -179,7 +198,7 @@ fun LoginScreen(
                         .width(300.dp)
                 ) {
                     Text(
-                        text = appViewModel.errorMessage,
+                        text = uiState.errMessage,
                         style = CustomTypography.bodySmall,
                         color = AlertColor
                     )
@@ -192,12 +211,11 @@ fun LoginScreen(
                 containerColor = BackgroundColor,
                 borderColor = SecondaryColor,
                 onClick = {
-                    appViewModel.login(
-                        context = context,
-                        navController = navController
+                    onEvent(
+                        LoginEvent.Login
                     )
                 },
-                isLoading = appUiState.isLogging,
+                isLoading = uiState.isLogging,
                 modifier = Modifier.width(300.dp)
             )
 
@@ -335,18 +353,4 @@ fun LoginTextField(
 }
 
 
-@Preview(
-    showSystemUi = true,
-    showBackground = true
-)
-@Composable
-fun LoginScreenPreview() {
-    val fakeAppViewModel: AppViewModel = viewModel()
-    val fakeNavController: NavHostController = rememberNavController()
-
-    LoginScreen(
-        appViewModel = fakeAppViewModel,
-        navController = fakeNavController
-    )
-}
 

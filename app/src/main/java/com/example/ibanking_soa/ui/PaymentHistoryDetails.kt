@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -45,7 +46,9 @@ import com.example.ibanking_soa.ui.theme.LabelColor
 import com.example.ibanking_soa.ui.theme.PrimaryColor
 import com.example.ibanking_soa.ui.theme.SecondaryColor
 import com.example.ibanking_soa.ui.theme.WarningColor
+import com.example.ibanking_soa.uiState.Payment
 import com.example.ibanking_soa.uiState.PaymentHistoryStatus
+import com.example.ibanking_soa.utils.formatVND
 import com.example.ibanking_soa.utils.formatterDate
 import com.example.ibanking_soa.viewModel.AppViewModel
 import java.time.format.DateTimeFormatter
@@ -53,12 +56,9 @@ import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PaymentHistoryDetails(
-    appViewModel: AppViewModel,
-    navController: NavHostController
+    payment: Payment?,
+    onBackClick: () -> Unit,
 ) {
-    val appUiState by appViewModel.uiState.collectAsState()
-    val formatter = DateTimeFormatter.ofPattern("HH:mm:ss | yyyy-MM-dd")
-
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -69,10 +69,8 @@ fun PaymentHistoryDetails(
                     )
                 },
                 navigationIcon = {
-                    IconButton (
-                        onClick = {
-                            navController.navigateUp()
-                        }
+                    IconButton(
+                        onClick = onBackClick
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -89,6 +87,16 @@ fun PaymentHistoryDetails(
         },
         containerColor = BackgroundColor
     ) { innerPadding ->
+        if (payment == null) {
+            Text(
+                text = "No payment selected",
+                style = CustomTypography.bodyLarge,
+                color = LabelColor,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center
+            )
+            return@Scaffold
+        }
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top,
@@ -101,7 +109,7 @@ fun PaymentHistoryDetails(
                 modifier = Modifier
                     .clip(shape = CircleShape)
                     .background(
-                        color = when (appUiState.selectedHistoryPayment!!.status) {
+                        color = when (payment.status) {
                             PaymentHistoryStatus.SUCCESS.status -> SecondaryColor
                             PaymentHistoryStatus.FAILED.status -> AlertColor
                             PaymentHistoryStatus.PENDING.status -> WarningColor
@@ -111,7 +119,7 @@ fun PaymentHistoryDetails(
                     .padding(20.dp)
             ) {
                 Icon(
-                    imageVector = when (appUiState.selectedHistoryPayment!!.status) {
+                    imageVector = when (payment.status) {
                         PaymentHistoryStatus.SUCCESS.status -> Icons.Default.DoneOutline
                         PaymentHistoryStatus.FAILED.status -> Icons.Default.ErrorOutline
                         PaymentHistoryStatus.PENDING.status -> Icons.Default.Timelapse
@@ -125,9 +133,9 @@ fun PaymentHistoryDetails(
             }
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = appUiState.selectedHistoryPayment!!.status,
+                text = payment.status,
                 style = CustomTypography.titleLarge,
-                color = when (appUiState.selectedHistoryPayment!!.status) {
+                color = when (payment.status) {
                     PaymentHistoryStatus.SUCCESS.status -> SecondaryColor
                     PaymentHistoryStatus.FAILED.status -> AlertColor
                     PaymentHistoryStatus.PENDING.status -> WarningColor
@@ -141,39 +149,24 @@ fun PaymentHistoryDetails(
             )
             PaymentInfLine(
                 lineText = R.string.PaymentDetails_ReferenceCode,
-                content = appUiState.selectedHistoryPayment!!.paymentRef?:"",
+                content = payment.paymentRef ?: "",
                 modifier = Modifier.fillMaxWidth()
             )
             PaymentInfLine(
                 lineText = R.string.PaymentDetails_Date,
-                content = formatterDate(appUiState.selectedHistoryPayment!!.paidAt) ,
+                content = formatterDate(payment.paidAt),
                 modifier = Modifier.fillMaxWidth()
             )
             PaymentInfLine(
                 lineText = R.string.PaymentDetails_StudentId,
-                content = appUiState.selectedHistoryPayment!!.studentId,
+                content = payment.studentId,
                 modifier = Modifier.fillMaxWidth()
             )
             PaymentInfLine(
                 lineText = R.string.PaymentDetails_Amount,
-                content = "${appViewModel.formatCurrency(appUiState.selectedHistoryPayment!!.totalAmount)} VND",
+                content = "${payment.totalAmount.formatVND()} VND",
                 modifier = Modifier.fillMaxWidth()
             )
         }
     }
-}
-
-@Preview(
-    showBackground = true,
-    showSystemUi = true
-)
-@Composable
-fun PaymentHistoryDetailsPreview() {
-    val fakeAppViewModel: AppViewModel = viewModel()
-    val fakeNavController: NavHostController = rememberNavController()
-
-    PaymentHistoryDetails(
-        appViewModel = fakeAppViewModel,
-        navController = fakeNavController
-    )
 }

@@ -57,6 +57,7 @@ const paymentController = {
     const payment = await paymentService.checkInTransaction(userId, studentId);
     if (!payment) {
       res.status(200).json(new ApiResponse(200, "No pending payment transaction", null));
+      return;
     }
     res.status(200).json(new ApiResponse(200, "Payment transaction status", payment));
   },

@@ -22,7 +22,7 @@ data class User(
     val fullName: String = "fullName",
     val phoneNumber: String = "phoneNumber",
     val email: String = "email",
-    val balance: BigDecimal = BigDecimal.ZERO
+    val balance: BigDecimal = 100000000000.toBigDecimal()
 )
 
 data class TuitionFee(
@@ -61,18 +61,4 @@ enum class PaymentHistoryStatus(
     FAILED("failed")
 }
 
-val testPaymentHistory: List<PaymentHistoryItem> = listOf(
-    PaymentHistoryItem(
-        payment = Payment(),
-        date = LocalDateTime.of(2025, 9, 1, 14, 30, 0)
-    ),
-    PaymentHistoryItem(
-        payment = Payment(),
-        date = LocalDateTime.of(2025, 8, 15, 9, 0, 0)
-    ),
-    PaymentHistoryItem(
-        payment = Payment(),
-        date = LocalDateTime.of(2025, 7, 20, 19, 45, 0)
-    )
-)
 

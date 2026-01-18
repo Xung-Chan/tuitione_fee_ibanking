@@ -39,7 +39,7 @@ const userService = {
         type: "access"
       },
       process.env.JWT_SECRET,
-      { expiresIn: '30s' }
+      { expiresIn: '1d' }
     );
     const refresh = jwt.sign(
       {
@@ -51,7 +51,15 @@ const userService = {
       { expiresIn: '7d' }
     );
 
-    return { access, refresh, user: user };
+    return {
+      access, refresh, user: {
+        username: user.username,
+        fullName: user.fullName,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        balance: user.balance
+      }
+    };
   },
   refreshToken: async (token) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -167,7 +175,8 @@ const userService = {
       throw new ApiError(response.status, response.title, response.message, response.stack);
     }
 
-    if (user.balance < payment.totalAmount) {
+    if (parseFloat(user.balance) < parseFloat(payment.totalAmount)) {
+      console.log(user.balance, payment.totalAmount);
       throw new ApiError(400, "Insufficient balance", "User");
     }
     await userService.deductBalance(userId, payment.totalAmount);

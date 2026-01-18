@@ -57,6 +57,15 @@ const studentService = {
         },
       ],
     });
+    if (studentFees.length === 0) {
+      return {
+        isPayable: false,
+        studentId: student.id,
+        fullName: student.fullName,
+        totalPending: 0,
+        studentFees: [],
+      }
+    }
 
     const totalPending = studentFees.reduce(
       (sum, sf) => sum + parseFloat(sf.amount),

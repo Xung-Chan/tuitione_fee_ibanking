@@ -63,6 +63,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.example.ibanking_soa.R
+import com.example.ibanking_soa.event.PaymentDetailEvent
 import com.example.ibanking_soa.ui.theme.AcceptColor
 import com.example.ibanking_soa.ui.theme.AlertColor
 import com.example.ibanking_soa.ui.theme.BackgroundColor
@@ -72,287 +73,320 @@ import com.example.ibanking_soa.ui.theme.PrimaryColor
 import com.example.ibanking_soa.ui.theme.SecondaryColor
 import com.example.ibanking_soa.ui.theme.TextColor
 import com.example.ibanking_soa.ui.theme.WarningColor
+import com.example.ibanking_soa.uiState.PaymentDetailUS
+import com.example.ibanking_soa.utils.LoadingScaffold
+import com.example.ibanking_soa.utils.formatVND
 import com.example.ibanking_soa.viewModel.AppViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PaymentDetails(
-    appViewModel: AppViewModel,
-    navController: NavHostController
+    uiState: PaymentDetailUS,
+    onEvent: (PaymentDetailEvent) -> Unit,
+    onBackClick: () -> Unit,
 ) {
-    val context = LocalContext.current
-    val appUiState by appViewModel.uiState.collectAsState()
-    val payment = appUiState.payment
+    val payment = uiState.payment
     var isChecked by remember { mutableStateOf(false) }
     var isShowDialog by rememberSaveable { mutableStateOf(false) }
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.PaymentInformation),
-                        style = CustomTypography.titleLarge
-                    )
-                },
-                navigationIcon = {
-                    IconButton(
-                        onClick = {
-                            // TODO: NAV BACK EVENT HANDLING
-                            navController.navigateUp()
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = null
+    LoadingScaffold(
+        isLoading = uiState.isLoading
+    ) {
+
+        Scaffold(
+            topBar = {
+                CenterAlignedTopAppBar(
+                    title = {
+                        Text(
+                            text = stringResource(R.string.PaymentInformation),
+                            style = CustomTypography.titleLarge
                         )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = PrimaryColor,
-                    titleContentColor = BackgroundColor,
-                    navigationIconContentColor = BackgroundColor
+                    },
+                    navigationIcon = {
+                        IconButton(
+                            onClick = onBackClick
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = null
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = PrimaryColor,
+                        titleContentColor = BackgroundColor,
+                        navigationIconContentColor = BackgroundColor
+                    )
                 )
-            )
-        },
-        bottomBar = {
-            if (!appViewModel.isOtpBoxVisible) {
+            },
+
+            bottomBar = {
+                if (!uiState.isOtpBoxVisible && payment != null && uiState.user != null) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Top,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+                            .background(color = BackgroundColor)
+                            .padding(20.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
+
+                                Checkbox(
+                                    checked = isChecked,
+                                    onCheckedChange = { isChecked = it },
+                                    colors = CheckboxDefaults.colors(
+                                        checkedColor = PrimaryColor,
+                                        uncheckedColor = LabelColor
+                                    ),
+                                    modifier = Modifier.padding(end = 8.dp)
+                                )
+
+                            }
+                            Text(
+                                text = buildAnnotatedString {
+                                    append("Agree to ")
+                                    withStyle(
+                                        style = SpanStyle(
+                                            color = PrimaryColor,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    ) {
+                                        append("terms and conditions")
+                                    }
+                                },
+                                style = CustomTypography.bodyMedium,
+                                color = TextColor,
+                                modifier = Modifier.clickable {
+                                    isShowDialog = true
+                                }
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = stringResource(R.string.PaymentInformation_Balance),
+                                style = CustomTypography.titleSmall
+                            )
+                            Spacer(modifier = Modifier.weight(1f))
+                            Text(
+                                text = "${uiState.user.balance.formatVND()} VND",
+                                style = CustomTypography.bodyMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = if (payment.totalAmount <= uiState.user.balance) AcceptColor else WarningColor,
+                                textAlign = TextAlign.End,
+                            )
+                        }
+                        Button(
+                            onClick = {
+                                onEvent(PaymentDetailEvent.SendOtp)
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            elevation = ButtonDefaults.buttonElevation(4.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = PrimaryColor,
+                                contentColor = BackgroundColor
+                            ),
+                            enabled = isChecked && (payment.totalAmount <= uiState.user.balance),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            if (uiState.isSendingOtp) {
+                                CircularProgressIndicator(
+                                    color = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            } else {
+
+                                Text(
+                                    text = stringResource(R.string.PaymentInformation_Transfer),
+                                    fontWeight = FontWeight.Medium,
+                                    style = CustomTypography.bodyLarge,
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            containerColor = SecondaryColor,
+            modifier = Modifier.systemBarsPadding()
+        ) { innerPadding ->
+            if (payment == null || uiState.user == null) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) {
+                    Text(
+                        text = "No payment information available",
+                        style = CustomTypography.titleMedium,
+                        color = LabelColor
+                    )
+                }
+                return@Scaffold
+            } else {
+
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Top,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
-                        .background(color = BackgroundColor)
                         .padding(20.dp)
+                        .padding(innerPadding)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
-
-                            Checkbox(
-                                checked = isChecked,
-                                onCheckedChange = { isChecked = it },
-                                colors = CheckboxDefaults.colors(
-                                    checkedColor = PrimaryColor,
-                                    uncheckedColor = LabelColor
-                                ),
-                                modifier = Modifier.padding(end = 8.dp)
-                            )
-
-                        }
-                        Text(
-                            text = buildAnnotatedString {
-                                append("Agree to ")
-                                withStyle(
-                                    style = SpanStyle(
-                                        color = PrimaryColor,
-                                        fontWeight = FontWeight.Bold
-                                    )
+                    if (isShowDialog) {
+                        CustomDialog(
+                            onDismiss = {
+                                isChecked = false
+                                isShowDialog = false
+                            },
+                            onConfirm = {
+                                isChecked = true
+                                isShowDialog = false
+                            },
+                            confirmText = "Agree",
+                            title = "Terms and Conditions",
+                            content = {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(20.dp),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    append("terms and conditions")
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Term 1",
+                                            style = CustomTypography.titleMedium
+
+                                        )
+                                    }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Viverra condimentum eget purus in. Consectetur eget id morbi amet amet, in. Ipsum viverra pretium tellus neque. Ullamcorper suspendisse aenean leo pharetra in sit semper et. Amet quam placerat sem.",
+                                            style = CustomTypography.bodyMedium
+                                        )
+                                    }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = "Term 2",
+                                            style = CustomTypography.titleMedium
+
+                                        )
+                                    }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Text(
+                                            text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Viverra condimentum eget purus in. Consectetur eget id morbi amet amet, in. Ipsum viverra pretium tellus neque. Ullamcorper suspendisse aenean leo pharetra in sit semper et. Amet quam placerat sem.",
+                                            style = CustomTypography.bodyMedium
+                                        )
+                                    }
                                 }
                             },
-                            style = CustomTypography.bodyMedium,
-                            color = TextColor,
-                            modifier = Modifier.clickable {
-                                isShowDialog = true
-                            }
                         )
-                    }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = stringResource(R.string.PaymentInformation_Balance),
-                            style = CustomTypography.titleSmall
-                        )
-                        Spacer(modifier = Modifier.weight(1f))
-                        Text(
-                            text = "${appViewModel.formatCurrency(appUiState.user.balance)} VND",
-                            style = CustomTypography.bodyMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = if (payment.totalAmount <= appUiState.user.balance) AcceptColor else WarningColor,
-                            textAlign = TextAlign.End,
-                        )
-                    }
-                    Button(
-                        onClick = { appViewModel.sendOTP(context = context) },
-                        shape = RoundedCornerShape(8.dp),
-                        elevation = ButtonDefaults.buttonElevation(4.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = PrimaryColor,
-                            contentColor = BackgroundColor
-                        ),
-                        enabled = isChecked && (payment.totalAmount <= appUiState.user.balance),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        if (appUiState.isSendingOtp) {
-                            CircularProgressIndicator(
-                                color = Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        } else {
 
-                            Text(
-                                text = stringResource(R.string.PaymentInformation_Transfer),
-                                fontWeight = FontWeight.Medium,
-                                style = CustomTypography.bodyLarge,
-                            )
-                        }
                     }
-                }
-            }
-        },
-        containerColor = SecondaryColor,
-        modifier = Modifier.systemBarsPadding()
-    ) { innerPadding ->
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp)
-                .padding(innerPadding)
-        ) {
-            if (isShowDialog) {
-                CustomDialog(
-                    onDismiss = {
-                        isChecked = false
-                        isShowDialog = false
-                    },
-                    onConfirm = {
-                        isChecked = true
-                        isShowDialog = false
-                    },
-                    confirmText = "Agree",
-                    title = "Terms and Conditions",
-                    content = {
+
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        shadowElevation = 4.dp,
+                        tonalElevation = 4.dp
+                    ) {
                         Column(
+                            horizontalAlignment = Alignment.Start,
+                            verticalArrangement = Arrangement.Top,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(20.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                                .clip(shape = RoundedCornerShape(20.dp))
+                                .background(BackgroundColor)
+                                .padding(20.dp)
                         ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Term 1",
-                                    style = CustomTypography.titleMedium
-
-                                )
-                            }
-                            Row(
+                            Text(
+                                text = stringResource(R.string.PaymentInformation_DetailInformation),
+                                style = CustomTypography.titleSmall
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            HorizontalDivider(
+                                thickness = 1.dp,
+                                color = LabelColor
+                            )
+                            PaymentInfLine(
+                                lineText = R.string.PaymentInformation_ReferenceCode,
+                                content = payment.paymentRef ?: "",
                                 modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(
-                                    text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Viverra condimentum eget purus in. Consectetur eget id morbi amet amet, in. Ipsum viverra pretium tellus neque. Ullamcorper suspendisse aenean leo pharetra in sit semper et. Amet quam placerat sem.",
-                                    style = CustomTypography.bodyMedium
-                                )
-                            }
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Term 2",
-                                    style = CustomTypography.titleMedium
-
-                                )
-                            }
-                            Row(
+                            )
+                            PaymentInfLine(
+                                lineText = R.string.PaymentInformation_StudentName,
+                                content = payment.studentFullName,
                                 modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(
-                                    text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Viverra condimentum eget purus in. Consectetur eget id morbi amet amet, in. Ipsum viverra pretium tellus neque. Ullamcorper suspendisse aenean leo pharetra in sit semper et. Amet quam placerat sem.",
-                                    style = CustomTypography.bodyMedium
-                                )
-                            }
+                            )
+                            PaymentInfLine(
+                                lineText = R.string.PaymentInformation_StudentID,
+                                content = uiState.payment.studentId,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            PaymentInfLine(
+                                lineText = R.string.PaymentInformation_TuitionFee,
+                                content = "${payment.totalAmount.formatVND()} VND",
+                                contentColor = AlertColor,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            PaymentInfLine(
+                                lineText = R.string.PaymentInformation_TransferFee,
+                                content = "Free",
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            HorizontalDivider(
+                                thickness = 1.dp,
+                                color = LabelColor
+                            )
+                            PaymentInfLine(
+                                lineText = R.string.PaymentInformation_Total,
+                                content = "${payment.totalAmount.formatVND()} VND",
+                                contentColor = AlertColor,
+                                modifier = Modifier.fillMaxWidth()
+                            )
                         }
-                    },
-                )
-
-            }
-
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                shadowElevation = 4.dp,
-                tonalElevation = 4.dp
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.Start,
-                    verticalArrangement = Arrangement.Top,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(shape = RoundedCornerShape(20.dp))
-                        .background(BackgroundColor)
-                        .padding(20.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.PaymentInformation_DetailInformation),
-                        style = CustomTypography.titleSmall
-                    )
+                    }
                     Spacer(modifier = Modifier.height(10.dp))
-                    HorizontalDivider(
-                        thickness = 1.dp,
-                        color = LabelColor
-                    )
-                    PaymentInfLine(
-                        lineText = R.string.PaymentInformation_ReferenceCode,
-                        content = payment.paymentRef ?: "",
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    PaymentInfLine(
-                        lineText = R.string.PaymentInformation_StudentName,
-                        content = payment.studentFullName,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    PaymentInfLine(
-                        lineText = R.string.PaymentInformation_StudentID,
-                        content = appUiState.payment.studentId,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    PaymentInfLine(
-                        lineText = R.string.PaymentInformation_TuitionFee,
-                        content = "${appViewModel.formatCurrency(payment.totalAmount)} VND",
-                        contentColor = AlertColor,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    PaymentInfLine(
-                        lineText = R.string.PaymentInformation_TransferFee,
-                        content = "Free",
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    HorizontalDivider(
-                        thickness = 1.dp,
-                        color = LabelColor
-                    )
-                    PaymentInfLine(
-                        lineText = R.string.PaymentInformation_Total,
-                        content = "${appViewModel.formatCurrency(payment.totalAmount)} VND",
-                        contentColor = AlertColor,
-                        modifier = Modifier.fillMaxWidth()
+
+                }
+                if (uiState.isOtpBoxVisible) {
+                    OtpDialogCustom(
+                        otpLength = 6,
+                        otpValue = uiState.otpValue,
+                        onOtpChange = {
+                            onEvent(
+                                PaymentDetailEvent.ChangeOtp(it)
+                            )
+                        },
+                        onDismiss = {
+                            onEvent(
+                                PaymentDetailEvent.DismissOtpBox
+                            )
+                        }
                     )
                 }
             }
-            Spacer(modifier = Modifier.height(10.dp))
-
-        }
-        if (appViewModel.isOtpBoxVisible) {
-            OtpDialogCustom(
-                otpLength = 6,
-                otpValue = appViewModel.otpValue,
-                onOtpChange = { appViewModel.onOtpChange(it, context, navController) },
-                onDismiss = { appViewModel.onOtpDismiss() }
-            )
         }
     }
+
 }
 
 @Composable
@@ -476,18 +510,18 @@ fun OtpDialogCustom(
     }
 }
 
-@Preview(
-    showBackground = true,
-    showSystemUi = true
-)
-@Composable
-fun PaymentDetailsScreenPreview() {
-    val fakeAppViewModel: AppViewModel = viewModel()
-    val fakeNavController: NavHostController = rememberNavController()
-
-    PaymentDetails(
-        appViewModel = fakeAppViewModel,
-        navController = fakeNavController
-    )
-
-}
+//@Preview(
+//    showBackground = true,
+//    showSystemUi = true
+//)
+//@Composable
+//fun PaymentDetailsScreenPreview() {
+//    val fakeAppViewModel: AppViewModel = viewModel()
+//    val fakeNavController: NavHostController = rememberNavController()
+//
+//    PaymentDetails(
+//        appViewModel = fakeAppViewModel,
+//        navController = fakeNavController
+//    )
+//
+//}

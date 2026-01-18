@@ -58,6 +58,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.example.ibanking_soa.R
 import com.example.ibanking_soa.Screens
+import com.example.ibanking_soa.event.TuitionFeeEvent
 import com.example.ibanking_soa.ui.theme.AcceptColor
 import com.example.ibanking_soa.ui.theme.AlertColor
 import com.example.ibanking_soa.ui.theme.BackgroundColor
@@ -66,17 +67,16 @@ import com.example.ibanking_soa.ui.theme.LabelColor
 import com.example.ibanking_soa.ui.theme.PrimaryColor
 import com.example.ibanking_soa.ui.theme.TextColor
 import com.example.ibanking_soa.ui.theme.WarningColor
+import com.example.ibanking_soa.uiState.TuitionFeeUS
+import com.example.ibanking_soa.utils.formatVND
 import com.example.ibanking_soa.viewModel.AppViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TuitionFeeScreen(
-    appViewModel: AppViewModel,
-    navController: NavHostController
+    uiState: TuitionFeeUS,
+    onEvent: (TuitionFeeEvent) -> Unit,
 ) {
-    val context = LocalContext.current
-    val appUiState by appViewModel.uiState.collectAsState()
-
     var logoutDialogVisible by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -94,7 +94,9 @@ fun TuitionFeeScreen(
                         contentDescription = null,
                         modifier = Modifier
                             .clickable {
-                                appViewModel.onViewHistoryClick(navController = navController)
+                                onEvent(
+                                    TuitionFeeEvent.ViewHistory
+                                )
                             }
                     )
                     Spacer(modifier = Modifier.width(10.dp))
@@ -122,77 +124,205 @@ fun TuitionFeeScreen(
         },
         modifier = Modifier.systemBarsPadding(),
     ) { innerPadding ->
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = 10.dp)
-                .padding(innerPadding)
-        ) {
-            Image(
-                painter = painterResource(R.drawable.avatar),
-                contentDescription = "Avatar",
-                modifier = Modifier.size(125.dp)
-            )
-            Spacer(modifier = Modifier.height(5.dp))
-            Text(
-                text = appUiState.user.fullName,
-                style = CustomTypography.headlineSmall,
-                color = TextColor,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(5.dp))
-            Text(
-                text = appUiState.user.phoneNumber,
-                style = CustomTypography.labelLarge,
-                color = LabelColor
-            )
-            Text(
-                text = appUiState.user.email,
-                style = CustomTypography.labelLarge,
-                color = LabelColor
-            )
-            Spacer(modifier = Modifier.height(20.dp))
-            HorizontalDivider(
-                thickness = 1.dp,
-                color = PrimaryColor
-            )
+
+        if (uiState.user == null) {
+            Box(
+                contentAlignment = Alignment.Center
+            ) {
+                Text("No User Information Found", style = CustomTypography.bodyMedium)
+            }
+        } else {
 
             Column(
-                horizontalAlignment = Alignment.Start,
+                horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Top,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 10.dp, horizontal = 20.dp)
+                    .fillMaxSize()
+                    .padding(top = 10.dp)
+                    .padding(innerPadding)
             ) {
-                Text(
-                    text = stringResource(R.string.TuitionFee_StudentID),
-                    style = CustomTypography.titleSmall
+                Image(
+                    painter = painterResource(R.drawable.avatar),
+                    contentDescription = "Avatar",
+                    modifier = Modifier.size(125.dp)
                 )
                 Spacer(modifier = Modifier.height(5.dp))
-                Row(
-                    horizontalArrangement = Arrangement.Start,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
+                Text(
+                    text = uiState.user.fullName,
+                    style = CustomTypography.headlineSmall,
+                    color = TextColor,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(5.dp))
+                Text(
+                    text = uiState.user.phoneNumber,
+                    style = CustomTypography.labelLarge,
+                    color = LabelColor
+                )
+                Text(
+                    text = uiState.user.email,
+                    style = CustomTypography.labelLarge,
+                    color = LabelColor
+                )
+                Spacer(modifier = Modifier.height(20.dp))
+                HorizontalDivider(
+                    thickness = 1.dp,
+                    color = PrimaryColor
+                )
+
+                Column(
+                    horizontalAlignment = Alignment.Start,
+                    verticalArrangement = Arrangement.Top,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 10.dp, horizontal = 20.dp)
                 ) {
-                    CustomInformationTextField(
-                        placeholder = stringResource(R.string.TuitionFee_IDPlaceHolder),
-                        leadingIcon = Icons.Default.PersonSearch,
-                        value = appViewModel.studentIdValue,
-                        onValueChange = { appViewModel.onStudentIdChange(it) },
-                        keyboardOptions = KeyboardOptions.Default.copy(
-                            keyboardType = KeyboardType.Text,
-                            imeAction = ImeAction.Done
-                        ),
-                        modifier = Modifier
-                            .height(60.dp)
-                            .fillMaxWidth(0.8f)
+                    Text(
+                        text = stringResource(R.string.TuitionFee_StudentID),
+                        style = CustomTypography.titleSmall
                     )
-                    Spacer(modifier = Modifier.width(5.dp))
+                    Spacer(modifier = Modifier.height(5.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.Start,
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        CustomInformationTextField(
+                            placeholder = stringResource(R.string.TuitionFee_IDPlaceHolder),
+                            leadingIcon = Icons.Default.PersonSearch,
+                            value = uiState.studentIdValue,
+                            onValueChange = {
+                                onEvent(TuitionFeeEvent.ChangeStudentId(it))
+                            },
+                            keyboardOptions = KeyboardOptions.Default.copy(
+                                keyboardType = KeyboardType.Text,
+                                imeAction = ImeAction.Done
+                            ),
+                            modifier = Modifier
+                                .height(60.dp)
+                                .fillMaxWidth(0.8f)
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Button(
+                            onClick = {
+
+                                onEvent(
+                                    TuitionFeeEvent.Search
+                                )
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            elevation = ButtonDefaults.buttonElevation(4.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = PrimaryColor,
+                                contentColor = BackgroundColor
+                            ),
+                            modifier = Modifier
+                                .height(60.dp)
+                                .fillMaxWidth()
+                        ) {
+                            if (uiState.isSearching) {
+                                CircularProgressIndicator(
+                                    color = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            } else {
+
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = null
+                                )
+                            }
+                        }
+
+                    }
+                }
+                DashedDivider(
+                    thickness = 1.dp,
+                    color = PrimaryColor,
+                )
+
+                Column(
+                    horizontalAlignment = Alignment.Start,
+                    verticalArrangement = Arrangement.Top,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 10.dp, horizontal = 20.dp)
+                ) {
+                    if (uiState.tuitionFee == null) {
+                        Row(
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "No Information Found",
+                                style = CustomTypography.labelMedium
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = stringResource(R.string.TuitionFee_TuitionInformation),
+                            style = CustomTypography.titleSmall
+                        )
+                        TuitionInfLine(
+                            lineText = R.string.TuitionFee_StudentID,
+                            content = uiState.tuitionFee.studentId,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        TuitionInfLine(
+                            lineText = R.string.TuitionFee_StudentName,
+                            content = uiState.tuitionFee.studentFullName,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        TuitionInfLine(
+                            lineText = R.string.TuitionFee_Amount,
+                            content = "${uiState.tuitionFee.amount.formatVND()} VND",
+                            contentColor = AlertColor,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.weight(1f))
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Top,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(
+                            width = 1.dp,
+                            color = PrimaryColor,
+                            shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+                        )
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 10.dp, horizontal = 20.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.TuitionFee_Balance),
+                            style = CustomTypography.titleSmall
+                        )
+                        Spacer(modifier = Modifier.weight(1f))
+                        Text(
+                            text = "${uiState.user.balance.formatVND()} VND",
+                            style = CustomTypography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = if (uiState.tuitionFee?.let {
+                                    it.amount <= uiState.user.balance
+                                } ?: false) AcceptColor else WarningColor,
+
+                            textAlign = TextAlign.End,
+                        )
+                    }
                     Button(
                         onClick = {
-                            appViewModel.onSearchStudentId(navController)
+                            onEvent(
+                                TuitionFeeEvent.ContinuePayment
+                            )
+
                         },
                         shape = RoundedCornerShape(8.dp),
                         elevation = ButtonDefaults.buttonElevation(4.dp),
@@ -200,169 +330,56 @@ fun TuitionFeeScreen(
                             containerColor = PrimaryColor,
                             contentColor = BackgroundColor
                         ),
+                        enabled = uiState.tuitionFee?.let {
+                            uiState.payable && (it.amount <= uiState.user.balance)
+                        } ?: false,
                         modifier = Modifier
-                            .height(60.dp)
                             .fillMaxWidth()
+                            .padding(bottom = 10.dp)
+                            .padding(horizontal = 20.dp)
                     ) {
-                        if (appUiState.isSearching) {
+                        if (uiState.isCreatingPayment) {
                             CircularProgressIndicator(
                                 color = Color.White,
                                 modifier = Modifier.size(20.dp)
                             )
                         } else {
 
-                            Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = null
-                            )
-                        }
-                    }
-
-                }
-            }
-            DashedDivider(
-                thickness = 1.dp,
-                color = PrimaryColor,
-            )
-
-            Column(
-                horizontalAlignment = Alignment.Start,
-                verticalArrangement = Arrangement.Top,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 10.dp, horizontal = 20.dp)
-            ) {
-                if (appUiState.tuitionFee == null) {
-                    Row(
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = "No Information Found",
-                            style = CustomTypography.labelMedium
-                        )
-                    }
-                } else {
-                    Text(
-                        text = stringResource(R.string.TuitionFee_TuitionInformation),
-                        style = CustomTypography.titleSmall
-                    )
-                    TuitionInfLine(
-                        lineText = R.string.TuitionFee_StudentID,
-                        content = appUiState.tuitionFee!!.studentId,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    TuitionInfLine(
-                        lineText = R.string.TuitionFee_StudentName,
-                        content = appUiState.tuitionFee!!.studentFullName,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    TuitionInfLine(
-                        lineText = R.string.TuitionFee_Amount,
-                        content = "${appViewModel.formatCurrency(appUiState.tuitionFee!!.amount)} VND",
-                        contentColor = AlertColor,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-            Spacer(modifier = Modifier.weight(1f))
-
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Top,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(
-                        width = 1.dp,
-                        color = PrimaryColor,
-                        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
-                    )
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 10.dp, horizontal = 20.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.TuitionFee_Balance),
-                        style = CustomTypography.titleSmall
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                    Text(
-                        text = "${appViewModel.formatCurrency(appUiState.user.balance)} VND",
-                        style = CustomTypography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = if (appUiState.tuitionFee?.let {
-                                it.amount <= appUiState.user.balance
-                            } ?: false) AcceptColor else WarningColor,
-
-                        textAlign = TextAlign.End,
-                    )
-                }
-                Button(
-                    onClick = {
-                        appViewModel.processToPaymentInf(
-                            context = context,
-                            navController = navController
-                        )
-                    },
-                    shape = RoundedCornerShape(8.dp),
-                    elevation = ButtonDefaults.buttonElevation(4.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = PrimaryColor,
-                        contentColor = BackgroundColor
-                    ),
-                    enabled = appUiState.tuitionFee?.let {
-                        appUiState.payable && (it.amount <= appUiState.user.balance)
-                    } ?: false,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 10.dp)
-                        .padding(horizontal = 20.dp)
-                ) {
-                    if (appUiState.isCreatingPayment) {
-                        CircularProgressIndicator(
-                            color = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    } else {
-
-                        Text(
-                            text = stringResource(R.string.TuitionFee_ButtonText),
-                            fontWeight = FontWeight.Medium,
-                            style = CustomTypography.bodyLarge,
-                        )
-                    }
-                }
-            }
-            if (logoutDialogVisible) {
-                CustomDialog(
-                    title = stringResource(R.string.CustomDialog_Logout),
-                    onDismiss = { logoutDialogVisible = false },
-                    onConfirm = {
-                        navController.navigate(Screens.Login.name) {
-                            popUpTo(Screens.TuitionFee.name) { inclusive = true }
-                        }
-                    },
-                    confirmText = stringResource(R.string.CustomDialog_YesButton),
-                    content = {
-                        Column(
-                            horizontalAlignment = Alignment.Start,
-                            verticalArrangement = Arrangement.Top,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 20.dp, horizontal = 5.dp)
-                        ) {
                             Text(
-                                text = stringResource(R.string.CustomDialog_LogoutText),
-                                style = CustomTypography.bodyMedium,
-                                color = TextColor
+                                text = stringResource(R.string.TuitionFee_ButtonText),
+                                fontWeight = FontWeight.Medium,
+                                style = CustomTypography.bodyLarge,
                             )
                         }
                     }
-                )
+                }
+                if (logoutDialogVisible) {
+                    CustomDialog(
+                        title = stringResource(R.string.CustomDialog_Logout),
+                        onDismiss = { logoutDialogVisible = false },
+                        onConfirm = {
+                            onEvent(
+                                TuitionFeeEvent.Logout
+                            )
+                        },
+                        confirmText = stringResource(R.string.CustomDialog_YesButton),
+                        content = {
+                            Column(
+                                horizontalAlignment = Alignment.Start,
+                                verticalArrangement = Arrangement.Top,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 20.dp, horizontal = 5.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.CustomDialog_LogoutText),
+                                    style = CustomTypography.bodyMedium,
+                                    color = TextColor
+                                )
+                            }
+                        }
+                    )
+                }
             }
         }
     }
@@ -399,17 +416,17 @@ fun TuitionInfLine(
     }
 }
 
-@Preview(
-    showBackground = true,
-    showSystemUi = true
-)
-@Composable
-fun TuitionFeeScreenPreview() {
-    val fakeAppViewModel: AppViewModel = viewModel()
-    val fakeNavController: NavHostController = rememberNavController()
-
-    TuitionFeeScreen(
-        appViewModel = fakeAppViewModel,
-        navController = fakeNavController
-    )
-}
+//@Preview(
+//    showBackground = true,
+//    showSystemUi = true
+//)
+//@Composable
+//fun TuitionFeeScreenPreview() {
+//    val fakeAppViewModel: AppViewModel = viewModel()
+//    val fakeNavController: NavHostController = rememberNavController()
+//
+//    TuitionFeeScreen(
+//        appViewModel = fakeAppViewModel,
+//        navController = fakeNavController
+//    )
+//}
