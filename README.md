@@ -1,7 +1,7 @@
-# IBanking_SOA
+# Tuition Fee App
 
 ## Overview
-**Tuition Fees** is an application that assists students and related parties in **looking up and paying tuition fees** conveniently, transparently, and securely. The application is designed to address common problems in the free tuition payment process, such as: fast and continuous payment methods, difficulty tracking payment status, and limitations in making payments on behalf of other student users.
+**Tuition Fee** is an application that assists students and related parties in **looking up and paying tuition fees** conveniently, transparently, and securely. The application is designed to address common problems in the free tuition payment process, such as: fast and continuous payment methods, difficulty tracking payment status, and limitations in making payments on behalf of other student users.
 
 The system focuses on user experience, ensuring the accuracy of tuition fee data and clear access to payment history.
 
@@ -64,7 +64,7 @@ Open `CMD` in `backend` folder. There are 2 options:
   ```
 Hosting backend server is required.
 
-For example with `ngrok`:
+_For example with_ `ngrok`:
   ```cmd 
   ngrok http localhost:<your gateway port>
   ```
